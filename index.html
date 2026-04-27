@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五行能量：尖端深層循環棒 AI 分析儀</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #050505;
+            color: #f0f0f0;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        .gold-border { border: 1px solid rgba(255, 215, 0, 0.4); }
+        .gold-text { color: #ffd700; text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+        .glass-morphism {
+            background: rgba(15, 15, 15, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .scanning-bar {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #ffd700, transparent);
+            top: 0;
+            z-index: 30;
+            box-shadow: 0 0 15px #ffd700;
+            animation: scan-move 4s ease-in-out infinite;
+            display: none;
+        }
+
+        @keyframes scan-move {
+            0% { top: 15%; opacity: 0; }
+            50% { opacity: 1; }
+            100% { top: 85%; opacity: 0; }
+        }
+
+        .product-card {
+            background: linear-gradient(135deg, rgba(30,30,30,1) 0%, rgba(10,10,10,1) 100%);
+            border-left: 4px solid #ffd700;
+        }
+
+        #input_video { display: none; }
+        
+        .pulse-dot {
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        .product-image-placeholder {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #333 0%, #111 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="relative w-screen h-screen flex flex-col md:flex-row">
+        <!-- 左側：視覺掃描與 HUD 區 -->
+        <div class="relative flex-grow bg-black flex items-center justify-center overflow-hidden">
+            <video id="input_video" autoplay playsinline></video>
+            <canvas id="output_canvas" class="w-full h-full object-cover transform -scale-x-100"></canvas>
+            <div id="scanBar" class="scanning-bar"></div>
+            
+            <!-- HUD Overlay -->
+            <div class="absolute inset-0 p-6 pointer-events-none flex flex-col justify-between">
+                <div class="flex justify-between items-start">
+                    <div class="glass-morphism p-4 rounded-2xl gold-border pointer-events-auto">
+                        <div class="text-[10px] text-yellow-500 font-bold uppercase tracking-[0.2em] mb-1">Five Elements & Product Sync</div>
+                        <div class="text-xl font-bold flex items-center tracking-tighter">
+                            能量循環解構儀 <span class="ml-3 text-[9px] border border-yellow-500 text-yellow-500 px-1.5 py-0.5 rounded-sm animate-pulse">SYNCING</span>
+                        </div>
+                    </div>
+                    <div class="glass-morphism p-3 rounded-xl text-right">
+                        <div class="text-[10px] text-gray-500">當前追蹤模組</div>
+                        <div id="tracker-status" class="text-xs font-mono text-green-400 italic">ACUPRESSURE_POINTS</div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center">
+                    <div id="main-tip" class="glass-morphism px-8 py-3 rounded-full text-sm gold-text border border-yellow-500/30">
+                        正在鎖定五嶽能量點...
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-end">
+                    <div class="glass-morphism p-4 rounded-2xl w-48 border-l-4 border-yellow-500">
+                        <div class="text-[10px] text-gray-400 mb-2 uppercase tracking-widest">能量色譜偵測</div>
+                        <div id="color-box" class="w-full h-6 rounded bg-gray-800 mb-2 border border-white/10 shadow-inner"></div>
+                        <div id="color-hex" class="text-xs font-mono text-yellow-500">HEX: #---</div>
+                    </div>
+                    <button id="startBtn" class="pointer-events-auto bg-yellow-600 hover:bg-yellow-500 text-black font-bold px-10 py-5 rounded-2xl shadow-[0_10px_40px_rgba(255,215,0,0.4)] transition-all transform active:scale-95">
+                        啟動全維度分析
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：深度分析數據欄 -->
+        <div id="sidebar" class="w-full md:w-[420px] bg-[#080808] border-l border-white/5 p-8 overflow-y-auto z-40">
+            <h2 class="text-[11px] font-bold tracking-[0.4em] text-yellow-600 mb-8 flex items-center uppercase">
+                <span class="w-2 h-2 bg-yellow-600 mr-2"></span> PERSONALIZED CARE REPORT
+            </h2>
+
+            <div id="placeholder" class="text-center py-24 opacity-30">
+                <div class="text-5xl mb-4">✨</div>
+                <p class="text-xs tracking-widest">等待特徵數據注入...</p>
+            </div>
+
+            <div id="result-content" class="hidden space-y-8 animate-in fade-in slide-in-from-right-4 duration-700">
+                <!-- 能量分析結果 -->
+                <div class="p-6 rounded-2xl bg-gradient-to-br from-white/5 to-transparent border border-white/10">
+                    <div class="flex items-center mb-4">
+                        <div id="final-icon" class="text-4xl mr-4 drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]"></div>
+                        <div>
+                            <div id="final-name" class="text-2xl font-bold gold-text"></div>
+                            <div class="text-[10px] text-gray-500 uppercase tracking-widest">Five Elements Result</div>
+                        </div>
+                    </div>
+                    <p id="final-desc" class="text-sm text-gray-400 leading-relaxed italic"></p>
+                </div>
+
+                <!-- 產品推薦區 -->
+                <div>
+                    <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">專屬循環棒推薦</h3>
+                    <div class="product-card p-5 rounded-2xl flex items-center">
+                        <div id="prod-visual" class="product-image-placeholder mr-5">
+                            <!-- 產品示意圓圈 -->
+                            <div class="w-4 h-12 rounded-full shadow-2xl" id="prod-color-bar"></div>
+                        </div>
+                        <div class="flex-grow">
+                            <div id="prod-name" class="text-lg font-bold text-white mb-1"></div>
+                            <div id="prod-feature" class="text-[10px] font-bold text-yellow-500 uppercase tracking-tighter mb-2"></div>
+                            <p id="prod-desc" class="text-xs text-gray-400 leading-snug"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 按摩護理建議 -->
+                <div class="space-y-4">
+                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">一般美容養護建議</h4>
+                    <div id="care-tips" class="space-y-3">
+                        <!-- JS 注入 -->
+                    </div>
+                </div>
+
+                <div class="pt-8 border-t border-white/5">
+                    <p class="text-[9px] text-gray-600 leading-relaxed">
+                        * 尖端深層循環棒非醫療器材。分析建議僅供日常美容護理參考。如有不適請停止使用並諮詢專業美容師。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分析完成彈窗 -->
+    <div id="overlay-msg" class="fixed inset-0 bg-black/95 z-[100] hidden items-center justify-center p-8 text-center transition-all">
+        <div class="max-w-xs">
+            <div class="w-20 h-20 bg-yellow-600 rounded-full mx-auto mb-6 flex items-center justify-center text-3xl shadow-[0_0_50px_rgba(255,215,0,0.4)]">
+                ✓
+            </div>
+            <h3 class="text-2xl font-bold mb-3 gold-text">能量解構完成</h3>
+            <p class="text-gray-400 text-sm mb-8 leading-relaxed">您的五行特徵與循環棒適配數據已成功計算，點擊下方讀取報告。</p>
+            <button onclick="document.getElementById('overlay-msg').classList.add('hidden')" class="w-full py-4 bg-yellow-600 hover:bg-yellow-500 rounded-2xl font-bold text-black transition-all">開啟療癒之旅</button>
+        </div>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('input_video');
+        const canvasElement = document.getElementById('output_canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const scanBar = document.getElementById('scanBar');
+        const colorBox = document.getElementById('color-box');
+        
+        let isAnalyzing = false;
+        let lastData = { geometry: 0, rgb: [0,0,0], bright: 0 };
+        
+        // 五嶽標定點：10(火), 1(土), 152(水), 234(木), 454(金)
+        const SCAN_POINTS = [10, 1, 152, 234, 454];
+
+        const faceMesh = new FaceMesh({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+        });
+
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.7
+        });
+
+        faceMesh.onResults(results => {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            
+            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                const landmarks = results.multiFaceLandmarks[0];
+                
+                // 畫出環境網格 (更細膩)
+                drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, {color: '#ffd70011', lineWidth: 0.3});
+                drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, {color: '#ffd70033', lineWidth: 1});
+
+                // 畫出動態五嶽點
+                drawMountainNodes(landmarks);
+
+                // 採樣氣色 (取鼻部中嶽土位)
+                const point = landmarks[1];
+                const px = point.x * canvasElement.width;
+                const py = point.y * canvasElement.height;
+                const pixel = canvasCtx.getImageData(px, py, 1, 1).data;
+                lastData.rgb = [pixel[0], pixel[1], pixel[2]];
+                lastData.bright = (pixel[0] + pixel[1] + pixel[2]) / 3;
+
+                // 幾何計算
+                const h = Math.abs(landmarks[152].y - landmarks[10].y);
+                const w = Math.abs(landmarks[454].x - landmarks[234].x);
+                lastData.geometry = h / w;
+
+                // 即時更新 HUD
+                colorBox.style.backgroundColor = `rgb(${lastData.rgb[0]}, ${lastData.rgb[1]}, ${lastData.rgb[2]})`;
+                document.getElementById('color-hex').innerText = `HEX: #${lastData.rgb[0].toString(16).padStart(2,'0')}${lastData.rgb[1].toString(16).padStart(2,'0')}${lastData.rgb[2].toString(16).padStart(2,'0')}`;
+            }
+            canvasCtx.restore();
+        });
+
+        function drawMountainNodes(landmarks) {
+            const time = Date.now() * 0.005;
+            SCAN_POINTS.forEach(idx => {
+                const p = landmarks[idx];
+                const x = p.x * canvasElement.width;
+                const y = p.y * canvasElement.height;
+                const pulse = 8 + Math.sin(time) * 4;
+
+                canvasCtx.beginPath();
+                canvasCtx.arc(x, y, pulse, 0, 2 * Math.PI);
+                canvasCtx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+                canvasCtx.lineWidth = 1;
+                canvasCtx.stroke();
+
+                canvasCtx.beginPath();
+                canvasCtx.arc(x, y, 2.5, 0, 2 * Math.PI);
+                canvasCtx.fillStyle = '#ffd700';
+                canvasCtx.shadowBlur = 10;
+                canvasCtx.shadowColor = '#ffd700';
+                canvasCtx.fill();
+                canvasCtx.shadowBlur = 0;
+            });
+        }
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => { await faceMesh.send({image: videoElement}); },
+            width: 1280, height: 720
+        });
+        camera.start();
+
+        startBtn.addEventListener('click', () => {
+            isAnalyzing = true;
+            scanBar.style.display = 'block';
+            startBtn.disabled = true;
+            startBtn.innerText = "能量解構中...";
+            document.getElementById('main-tip').innerText = "正在測算五嶽氣韻與產品適配度...";
+
+            setTimeout(() => {
+                scanBar.style.display = 'none';
+                isAnalyzing = false;
+                startBtn.disabled = false;
+                startBtn.innerText = "重新分析特徵";
+                document.getElementById('main-tip').innerText = "分析報告已歸檔";
+                document.getElementById('placeholder').style.display = 'none';
+                renderProductReport();
+            }, 3500);
+        });
+
+        function renderProductReport() {
+            const { geometry, rgb } = lastData;
+            const r = rgb[0], g = rgb[1], b = rgb[2];
+            
+            // 產品數據矩陣
+            const PRODUCTS = {
+                GOLD: { name: "香檳金 循環棒", feature: "活力 • 自信", color: "#EAC17C", desc: "助於激發活力、提升自信感。猶如陽光灑在身上，讓您展現充沛生命力。" },
+                GRAY: { name: "太空灰 循環棒", feature: "平衡 • 生機", color: "#7F7F7F", desc: "為您的護理注入生機，助於平衡身心、舒緩累積的疲勞感。" },
+                BLACK: { name: "質感黑 循環棒", feature: "流動 • 靈活", color: "#1A1A1A", desc: "代表流動感與寧靜，助於舒緩壓力感，提高身心靈的柔軟度。" },
+                RED: { name: "幸福紅 循環棒", feature: "激情 • 提振", color: "#C0392B", desc: "點燃內在熱情，幫助提振精神，讓您在每一刻都充滿動力。" },
+                BROWN: { name: "焦糖棕 循環棒", feature: "安心 • 穩固", color: "#935116", desc: "帶給您安心的沉穩感，助於維持身心平衡，打造平穩生活基石。" }
+            };
+
+            let report = { 
+                element: "金形人", icon: "⚔️", 
+                desc: "您的形相呈現「五嶽朝拱」，輪廓俐落且具備細緻光澤感。", 
+                product: PRODUCTS.GOLD,
+                care: ["使用循環棒尖端點按「太陽穴」，幫助維持清新活力", "沿著下顎線條向上滑動按摩，維持輪廓線條感", "注重日間環境防護，維持肌膚光采穩定"]
+            };
+
+            // 邏輯判定
+            if (geometry > 1.45) {
+                report = { element: "木形人", icon: "🌲", desc: "形相清秀修長，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: ["使用循環棒點按「額頭中心」，舒緩整日緊繃感", "加強額部保濕後以循環棒橫向輕撫，幫助養分吸收", "多接觸自然環境，輔助維持身心平衡"] };
+            } else if (geometry < 1.15 || b > r + 15) {
+                report = { element: "水形人", icon: "💧", desc: "輪廓圓潤飽滿，氣色潤透，展現出極佳的智慧感。", product: PRODUCTS.BLACK, care: ["使用循環棒按摩「眼周部位」，舒緩疲勞感", "以圓潤筆身由鼻翼兩側向斜上方滑動按摩", "加強夜間深度修復，讓肌膚展現透亮感"] };
+            } else if (r > g + 45) {
+                report = { element: "火形人", icon: "🔥", desc: "輪廓帶尖，神采奕奕。展現出充沛的感染力與熱情。", product: PRODUCTS.RED, care: ["以循環棒點按「嘴角兩側」，展現自然親和魅力", "維持室內涼爽通風，幫助肌膚穩定舒適", "強化保濕屏障，維持肌膚亮透光澤"] };
+            } else if (geometry >= 1.25 && g > b) {
+                report = { element: "土形人", icon: "⛰️", desc: "形相方圓厚實，五嶽隆起，予人穩重信賴與溫暖感。", product: PRODUCTS.BROWN, care: ["使用循環棒點按「鼻翼兩側」，維持呼吸節奏與能量感", "加強毛孔深度清潔，維持肌膚質地細緻", "在保養最後步驟使用循環棒按壓頰部，鎖住水潤"] };
+            }
+
+            // 更新 UI
+            document.getElementById('final-icon').innerText = report.icon;
+            document.getElementById('final-name').innerText = report.element;
+            document.getElementById('final-desc').innerText = report.desc;
+            
+            document.getElementById('prod-name').innerText = report.product.name;
+            document.getElementById('prod-feature').innerText = report.product.feature;
+            document.getElementById('prod-desc').innerText = report.product.desc;
+            document.getElementById('prod-color-bar').style.backgroundColor = report.product.color;
+            document.getElementById('prod-color-bar').style.boxShadow = `0 0 15px ${report.product.color}88`;
+
+            const list = document.getElementById('care-tips');
+            list.innerHTML = "";
+            report.care.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "flex items-start text-xs text-gray-400 bg-white/5 p-3 rounded-xl border border-white/5";
+                div.innerHTML = `<span class="text-yellow-600 mr-2">✦</span><span>${item}</span>`;
+                list.appendChild(div);
+            });
+
+            document.getElementById('result-content').classList.remove('hidden');
+            document.getElementById('overlay-msg').classList.remove('hidden');
+            document.getElementById('overlay-msg').classList.add('flex');
+        }
+
+        function handleResize() {
+            canvasElement.width = canvasElement.clientWidth;
+            canvasElement.height = canvasElement.clientHeight;
+        }
+        window.addEventListener('resize', handleResize);
+        setTimeout(handleResize, 1000);
+
+    </script>
+</body>
+</html>
