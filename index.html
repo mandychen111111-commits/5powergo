@@ -93,13 +93,12 @@
 <body>
 
     <div class="relative w-screen h-screen flex flex-col md:flex-row overflow-hidden" id="app-container">
-        <!-- 左側：視覺掃描與 HUD 區 (由 id="main-scanner" 控制) -->
+        <!-- 左側：視覺掃描區 -->
         <div id="main-scanner" class="relative w-full h-[65vh] md:h-screen md:flex-grow bg-black flex items-center justify-center overflow-hidden border-b border-white/10 md:border-b-0 transition-all duration-500">
             <video id="input_video" autoplay playsinline></video>
             <canvas id="output_canvas" class="w-full h-full object-cover transform -scale-x-100"></canvas>
             <div id="scanBar" class="scanning-bar"></div>
             
-            <!-- HUD Overlay -->
             <div class="absolute inset-0 p-4 md:p-6 pointer-events-none flex flex-col justify-between">
                 <!-- Top Section -->
                 <div class="flex justify-between items-start gap-2">
@@ -136,7 +135,7 @@
             </div>
         </div>
 
-        <!-- 右側/下方：深度分析數據欄 (由 id="sidebar" 控制) -->
+        <!-- 右側/下方：報告區域 -->
         <div id="sidebar" class="w-full md:w-[420px] h-[35vh] md:h-screen bg-[#080808] border-t md:border-t-0 md:border-l border-white/10 p-6 md:p-8 overflow-y-auto z-40 transition-all duration-500">
             <div class="max-w-2xl mx-auto h-full flex flex-col">
                 <h2 class="text-[9px] md:text-[11px] font-bold tracking-[0.4em] text-yellow-600 mb-4 md:mb-8 flex items-center uppercase">
@@ -179,9 +178,7 @@
                     <!-- 按摩護理建議 -->
                     <div class="space-y-3 md:space-y-4">
                         <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">美容養護指引</h4>
-                        <div id="care-tips" class="space-y-2.5 md:space-y-3">
-                            <!-- JS 注入 -->
-                        </div>
+                        <div id="care-tips" class="space-y-2.5 md:space-y-3"></div>
                     </div>
 
                     <!-- 導購連結按鈕 -->
@@ -197,8 +194,8 @@
                         </button>
                     </div>
 
-                    <div class="pt-6 border-t border-white/5">
-                        <p class="text-[8px] md:text-[9px] text-gray-600 leading-relaxed text-center">
+                    <div class="pt-6 border-t border-white/5 text-center">
+                        <p class="text-[8px] md:text-[9px] text-gray-600 leading-relaxed">
                             * 分析建議僅供美容護理參考。尖端深層循環棒非醫療器材。如有不適請停止使用。
                         </p>
                     </div>
@@ -231,7 +228,6 @@
         
         let isAnalyzing = false;
         let lastData = { geometry: 0, rgb: [0,0,0], bright: 0 };
-        
         const SCAN_POINTS = [10, 1, 152, 234, 454];
 
         const faceMesh = new FaceMesh({
@@ -280,13 +276,11 @@
                 const x = p.x * canvasElement.width;
                 const y = p.y * canvasElement.height;
                 const pulse = 6 + Math.sin(time) * 3;
-
                 canvasCtx.beginPath();
                 canvasCtx.arc(x, y, pulse, 0, 2 * Math.PI);
                 canvasCtx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
                 canvasCtx.lineWidth = 1;
                 canvasCtx.stroke();
-
                 canvasCtx.beginPath();
                 canvasCtx.arc(x, y, 2, 0, 2 * Math.PI);
                 canvasCtx.fillStyle = '#ffd700';
@@ -324,7 +318,6 @@
 
         function switchToReportView() {
             document.getElementById('overlay-msg').classList.add('hidden');
-            // 隱藏掃描畫面，讓側邊欄佔滿全螢幕
             mainScanner.classList.add('hidden');
             sidebar.classList.remove('md:w-[420px]', 'h-[35vh]');
             sidebar.classList.add('w-full', 'h-screen');
@@ -332,7 +325,6 @@
         }
 
         function resetAnalysis() {
-            // 恢復掃描畫面
             mainScanner.classList.remove('hidden');
             sidebar.classList.add('md:w-[420px]', 'h-[35vh]');
             sidebar.classList.remove('w-full', 'h-screen');
@@ -343,7 +335,7 @@
 
         function renderProductReport() {
             const { geometry, rgb } = lastData;
-            const r = rgb[0], g = rgb[1], b = rgb[2];
+            const [r, g, b] = rgb;
             
             const PRODUCTS = {
                 GOLD: { name: "香檳金 循環棒", feature: "活力 • 自信", color: "#EAC17C", desc: "助於提升肌膚活力與自信感。猶如暖陽映照，展現充沛生命力。" },
@@ -353,35 +345,36 @@
                 BROWN: { name: "焦糖棕 循環棒", feature: "安心 • 穩固", color: "#935116", desc: "帶來沉穩安心感，助於維持肌膚平衡，打造穩定的養護基石。" }
             };
 
-            let report = { 
-                element: "金形人", icon: "⚔️", 
-                desc: "您的輪廓俐落且具備細緻光澤感，展現俐落的決斷特質。", 
-                product: PRODUCTS.GOLD,
-                care: ["以循環棒點按太陽穴，幫助提振精神活力", "沿下顎線向上按摩，維護肌膚彈力輪廓", "維持規律生活，展現自然健康光采"]
-            };
+            let result;
 
-            if (geometry > 1.45) {
-                report = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: ["使用循環棒按壓額頭中心，舒緩緊繃壓力感", "橫向滑動按摩額部，幫助維持肌膚平滑感", "增加環境濕度，輔助維持肌膚水潤健康"] };
-            } else if (geometry < 1.15 || b > r + 15) {
-                report = { element: "水形人", icon: "💧", desc: "輪廓圓潤，氣色潤透，具備極佳的智慧與適應力。", product: PRODUCTS.BLACK, care: ["使用循環棒輕按眼周，舒緩疲勞感", "以筆身由內向外滑動，維護肌膚細緻緊度", "加強夜間修復養護，展現晶瑩透亮感"] };
-            } else if (r > g + 45) {
-                report = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: ["點按嘴部兩側，展現自信親和魅力", "維持室內通風舒適，幫助肌膚穩定狀態", "強化日間防護，維持肌膚亮透光采"] };
-            } else if (geometry >= 1.25 && g > b) {
-                report = { element: "土形人", icon: "⛰️", desc: "形相穩重，予人厚實包容感與穩定感。", product: PRODUCTS.BROWN, care: ["點按鼻翼兩側，維持舒適能量感", "加強毛孔深層清潔，維持肌膚平滑質感", "護膚最後步驟按壓頰部，幫助鎖住水分"] };
+            if (geometry > 1.55) {
+                result = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: ["使用循環棒按壓額頭中心，幫助舒緩壓力感", "橫向滑動按摩額部，維護肌膚平滑質感", "增加環境濕度，輔助維持肌膚水潤健康"] };
+            } 
+            else if (r > g + 45 && r > b + 40) {
+                result = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: ["點按嘴部兩側，展現自信親和魅力", "維持室內通風舒適，幫助肌膚穩定狀態", "強化日間防護，幫助維持肌膚亮透光采"] };
+            }
+            else if (geometry >= 1.25 && g > b + 15) {
+                result = { element: "土形人", icon: "⛰️", desc: "形相穩重，予人厚實包容感與穩定感。", product: PRODUCTS.BROWN, care: ["點按鼻翼兩側，維持舒適能量感", "加強毛孔深層清潔，幫助維持肌膚平滑質感", "護膚最後步驟按壓頰部，鎖住水分"] };
+            }
+            else if (geometry < 1.18 || (b > r + 30 && b > g + 20)) {
+                result = { element: "水形人", icon: "💧", desc: "輪廓圓潤，氣色潤透，具備極佳的智慧與適應力。", product: PRODUCTS.BLACK, care: ["使用循環棒輕按眼周，舒緩疲勞感", "以筆身由內向外滑動，維護肌膚細緻緊度", "加強夜間修復養護，展現晶瑩透亮感"] };
+            }
+            else {
+                result = { element: "金形人", icon: "⚔️", desc: "您的輪廓俐落且具備細緻光澤感，展現俐落的決斷特質。", product: PRODUCTS.GOLD, care: ["以循環棒點按太陽穴，幫助提振精神活力", "沿下顎線向上按摩，維護肌膚彈力輪廓", "維持規律生活，展現自然健康光采"] };
             }
 
-            document.getElementById('final-icon').innerText = report.icon;
-            document.getElementById('final-name').innerText = report.element;
-            document.getElementById('final-desc').innerText = report.desc;
-            document.getElementById('prod-name').innerText = report.product.name;
-            document.getElementById('prod-feature').innerText = report.product.feature;
-            document.getElementById('prod-desc').innerText = report.product.desc;
-            document.getElementById('prod-color-bar').style.backgroundColor = report.product.color;
-            document.getElementById('prod-color-bar').style.boxShadow = `0 0 10px ${report.product.color}aa`;
+            document.getElementById('final-icon').innerText = result.icon;
+            document.getElementById('final-name').innerText = result.element;
+            document.getElementById('final-desc').innerText = result.desc;
+            document.getElementById('prod-name').innerText = result.product.name;
+            document.getElementById('prod-feature').innerText = result.product.feature;
+            document.getElementById('prod-desc').innerText = result.product.desc;
+            document.getElementById('prod-color-bar').style.backgroundColor = result.product.color;
+            document.getElementById('prod-color-bar').style.boxShadow = `0 0 10px ${result.product.color}aa`;
 
             const list = document.getElementById('care-tips');
             list.innerHTML = "";
-            report.care.forEach(item => {
+            result.care.forEach(item => {
                 const div = document.createElement('div');
                 div.className = "flex items-start text-[11px] md:text-xs text-gray-400 bg-white/5 p-3 rounded-xl border border-white/5";
                 div.innerHTML = `<span class="text-yellow-600 mr-2 shrink-0">✦</span><span>${item}</span>`;
