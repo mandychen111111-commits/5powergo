@@ -229,6 +229,32 @@
         let isAnalyzing = false;
         let lastData = { geometry: 0, rgb: [0,0,0], bright: 0 };
         const SCAN_POINTS = [10, 1, 152, 234, 454];
+        // 採樣點：鼻尖、左臉頰、右臉頰、額頭、下巴
+        const SKIN_SAMPLE_POINTS = [1, 50, 280, 10, 152];
+        const frameHistory = [];
+        const HISTORY_SIZE = 30;
+
+        function sampleSkinRGB(landmarks) {
+            let rSum = 0, gSum = 0, bSum = 0, count = 0;
+            SKIN_SAMPLE_POINTS.forEach(idx => {
+                const pt = landmarks[idx];
+                const cx = Math.round(pt.x * canvasElement.width);
+                const cy = Math.round(pt.y * canvasElement.height);
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        const x = cx + dx, y = cy + dy;
+                        if (x >= 0 && x < canvasElement.width && y >= 0 && y < canvasElement.height) {
+                            const d = canvasCtx.getImageData(x, y, 1, 1).data;
+                            rSum += d[0]; gSum += d[1]; bSum += d[2];
+                            count++;
+                        }
+                    }
+                }
+            });
+            return count > 0
+                ? [Math.round(rSum / count), Math.round(gSum / count), Math.round(bSum / count)]
+                : [128, 128, 128];
+        }
 
         const faceMesh = new FaceMesh({
             locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
@@ -252,19 +278,26 @@
                 drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, {color: '#ffd70033', lineWidth: 1});
                 drawMountainNodes(landmarks);
 
-                const point = landmarks[1];
-                const px = point.x * canvasElement.width;
-                const py = point.y * canvasElement.height;
-                const pixel = canvasCtx.getImageData(px, py, 1, 1).data;
-                lastData.rgb = [pixel[0], pixel[1], pixel[2]];
-                lastData.bright = (pixel[0] + pixel[1] + pixel[2]) / 3;
-
+                const rawRGB = sampleSkinRGB(landmarks);
                 const h = Math.abs(landmarks[152].y - landmarks[10].y);
                 const w = Math.abs(landmarks[454].x - landmarks[234].x);
-                lastData.geometry = h / w;
+                const rawGeo = h / w;
 
-                colorBox.style.backgroundColor = `rgb(${lastData.rgb[0]}, ${lastData.rgb[1]}, ${lastData.rgb[2]})`;
-                document.getElementById('color-hex').innerText = `HEX: #${lastData.rgb[0].toString(16).padStart(2,'0')}${lastData.rgb[1].toString(16).padStart(2,'0')}${lastData.rgb[2].toString(16).padStart(2,'0')}`;
+                frameHistory.push({ geometry: rawGeo, rgb: rawRGB });
+                if (frameHistory.length > HISTORY_SIZE) frameHistory.shift();
+
+                const n = frameHistory.length;
+                const avgGeo = frameHistory.reduce((s, f) => s + f.geometry, 0) / n;
+                const avgR = Math.round(frameHistory.reduce((s, f) => s + f.rgb[0], 0) / n);
+                const avgG = Math.round(frameHistory.reduce((s, f) => s + f.rgb[1], 0) / n);
+                const avgB = Math.round(frameHistory.reduce((s, f) => s + f.rgb[2], 0) / n);
+
+                lastData.geometry = avgGeo;
+                lastData.rgb = [avgR, avgG, avgB];
+                lastData.bright = (avgR + avgG + avgB) / 3;
+
+                colorBox.style.backgroundColor = `rgb(${avgR}, ${avgG}, ${avgB})`;
+                document.getElementById('color-hex').innerText = `HEX: #${avgR.toString(16).padStart(2,'0')}${avgG.toString(16).padStart(2,'0')}${avgB.toString(16).padStart(2,'0')}`;
             }
             canvasCtx.restore();
         });
@@ -334,9 +367,9 @@
         }
 
         function renderProductReport() {
-            const { geometry, rgb } = lastData;
+            const { geometry, rgb, bright } = lastData;
             const [r, g, b] = rgb;
-            
+
             const PRODUCTS = {
                 GOLD: { name: "香檳金 循環棒", feature: "活力 • 自信", color: "#EAC17C", desc: "助於提升肌膚活力與自信感。猶如暖陽映照，展現充沛生命力。" },
                 GRAY: { name: "太空灰 循環棒", feature: "平衡 • 生機", color: "#7F7F7F", desc: "為保養注入生機，助於舒緩壓力感與累積的疲勞。" },
@@ -347,18 +380,23 @@
 
             let result;
 
+            // 木形人：臉型修長（高寬比最大），純幾何判斷
             if (geometry > 1.55) {
                 result = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: ["使用循環棒按壓額頭中心，幫助舒緩壓力感", "橫向滑動按摩額部，維護肌膚平滑質感", "增加環境濕度，輔助維持肌膚水潤健康"] };
-            } 
-            else if (r > g + 45 && r > b + 40) {
+            }
+            // 火形人：紅通道明顯主導，膚色紅潤偏暖（多點平均後門檻微降）
+            else if (r > g + 35 && r > b + 35) {
                 result = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: ["點按嘴部兩側，展現自信親和魅力", "維持室內通風舒適，幫助肌膚穩定狀態", "強化日間防護，幫助維持肌膚亮透光采"] };
             }
-            else if (geometry >= 1.25 && g > b + 15) {
+            // 土形人：中等臉型 + 暖黃色調（r、g 均高於 b，放寬幾何門檻至 1.2）
+            else if (geometry >= 1.2 && r > b + 10 && g > b + 5) {
                 result = { element: "土形人", icon: "⛰️", desc: "形相穩重，予人厚實包容感與穩定感。", product: PRODUCTS.BROWN, care: ["點按鼻翼兩側，維持舒適能量感", "加強毛孔深層清潔，幫助維持肌膚平滑質感", "護膚最後步驟按壓頰部，鎖住水分"] };
             }
-            else if (geometry < 1.18 || (b > r + 30 && b > g + 20)) {
+            // 水形人：寬圓臉型（純幾何，修正原 OR 邏輯誤判）
+            else if (geometry < 1.22) {
                 result = { element: "水形人", icon: "💧", desc: "輪廓圓潤，氣色潤透，具備極佳的智慧與適應力。", product: PRODUCTS.BLACK, care: ["使用循環棒輕按眼周，舒緩疲勞感", "以筆身由內向外滑動，維護肌膚細緻緊度", "加強夜間修復養護，展現晶瑩透亮感"] };
             }
+            // 金形人：預設，輪廓均勻細緻、亮度佳
             else {
                 result = { element: "金形人", icon: "⚔️", desc: "您的輪廓俐落且具備細緻光澤感，展現俐落的決斷特質。", product: PRODUCTS.GOLD, care: ["以循環棒點按太陽穴，幫助提振精神活力", "沿下顎線向上按摩，維護肌膚彈力輪廓", "維持規律生活，展現自然健康光采"] };
             }
