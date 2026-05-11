@@ -229,8 +229,8 @@
         let isAnalyzing = false;
         let lastData = { geometry: 0, rgb: [0,0,0], bright: 0 };
         const SCAN_POINTS = [10, 1, 152, 234, 454];
-        // 採樣點：鼻尖、左臉頰、右臉頰、額頭、下巴
-        const SKIN_SAMPLE_POINTS = [1, 50, 280, 10, 152];
+        // 採樣點：額頭、鼻樑、鼻尖、下巴、人中（排除臉頰避免偏紅）
+        const SKIN_SAMPLE_POINTS = [10, 168, 1, 152, 4];
         const frameHistory = [];
         const HISTORY_SIZE = 30;
 
@@ -384,8 +384,8 @@
             if (geometry > 1.55) {
                 result = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: ["使用循環棒按壓額頭中心，幫助舒緩壓力感", "橫向滑動按摩額部，維護肌膚平滑質感", "增加環境濕度，輔助維持肌膚水潤健康"] };
             }
-            // 火形人：紅通道明顯主導，膚色紅潤偏暖（多點平均後門檻微降）
-            else if (r > g + 35 && r > b + 35) {
+            // 火形人：膚色明顯紅潤，紅通道大幅主導（排除臉頰後門檻提高）
+            else if (r > g + 50 && r > b + 45) {
                 result = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: ["點按嘴部兩側，展現自信親和魅力", "維持室內通風舒適，幫助肌膚穩定狀態", "強化日間防護，幫助維持肌膚亮透光采"] };
             }
             // 土形人：中等臉型 + 暖黃色調（r、g 均高於 b，放寬幾何門檻至 1.2）
