@@ -171,14 +171,15 @@
                                 <div id="prod-name" class="text-base md:text-lg font-bold text-white mb-0.5 truncate"></div>
                                 <div id="prod-feature" class="text-[9px] md:text-[10px] font-bold text-yellow-500 uppercase tracking-tighter mb-1.5"></div>
                                 <p id="prod-desc" class="text-[11px] md:text-xs text-gray-400 leading-snug line-clamp-3 md:line-clamp-none"></p>
+                                <div id="prod-timing" class="mt-1.5 text-[9px] md:text-[10px] text-gray-500 italic"></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 按摩護理建議 -->
                     <div class="space-y-3 md:space-y-4">
-                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">美容養護指引</h4>
-                        <div id="care-tips" class="space-y-2.5 md:space-y-3"></div>
+                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">專屬按摩養護指引</h4>
+                        <div id="care-tips" class="space-y-4"></div>
                     </div>
 
                     <!-- 導購連結按鈕 -->
@@ -371,34 +372,122 @@
             const [r, g, b] = rgb;
 
             const PRODUCTS = {
-                GOLD: { name: "香檳金 循環棒", feature: "活力 • 自信", color: "#EAC17C", desc: "助於提升肌膚活力與自信感。猶如暖陽映照，展現充沛生命力。" },
-                GRAY: { name: "太空灰 循環棒", feature: "平衡 • 生機", color: "#7F7F7F", desc: "為保養注入生機，助於舒緩壓力感與累積的疲勞。" },
-                BLACK: { name: "質感黑 循環棒", feature: "流動 • 靈活", color: "#1A1A1A", desc: "象徵寧靜流動，助於舒緩壓力感，提升肌膚細緻的柔軟度。" },
-                RED: { name: "幸福紅 循環棒", feature: "激情 • 提振", color: "#C0392B", desc: "提振精神活力，點燃內在熱情，幫助肌膚展現紅潤光采。" },
-                BROWN: { name: "焦糖棕 循環棒", feature: "安心 • 穩固", color: "#935116", desc: "帶來沉穩安心感，助於維持肌膚平衡，打造穩定的養護基石。" }
+                GOLD: { name: "香檳金 循環棒", feature: "活力 • 自信", color: "#EAC17C", desc: "助於提升肌膚活力與自信感。猶如暖陽映照，展現充沛生命力。", timing: "建議使用時機：早晨啟動、重要場合前提振" },
+                GRAY: { name: "太空灰 循環棒", feature: "平衡 • 生機", color: "#7F7F7F", desc: "為保養注入生機，助於舒緩壓力感與累積的疲勞。", timing: "建議使用時機：早晨提振、晚間放鬆" },
+                BLACK: { name: "質感黑 循環棒", feature: "流動 • 靈活", color: "#1A1A1A", desc: "象徵寧靜流動，助於舒緩壓力感，提升肌膚細緻的柔軟度。", timing: "建議使用時機：夜間修復、沐浴後深層保養" },
+                RED: { name: "幸福紅 循環棒", feature: "激情 • 提振", color: "#C0392B", desc: "提振精神活力，點燃內在熱情，幫助肌膚展現紅潤光采。", timing: "建議使用時機：日間提振、運動前後" },
+                BROWN: { name: "焦糖棕 循環棒", feature: "安心 • 穩固", color: "#935116", desc: "帶來沉穩安心感，助於維持肌膚平衡，打造穩定的養護基石。", timing: "建議使用時機：飯後 30 分鐘、睡前舒緩" }
+            };
+
+            const CARE = {
+                木: {
+                    scalp: { title: "頭皮按摩", icon: "💆", steps: [
+                        "以循環棒棒尖輕點<b>百會穴</b>（頭頂正中），停留 3 秒，重複 5 次",
+                        "從前額髮際線往後，沿頭頂中線緩慢滑推至後頸，疏通督脈",
+                        "十指張開環狀揉壓全頭皮，每區停留 5 秒，舒緩頭部緊繃"
+                    ]},
+                    face: { title: "臉部按摩", icon: "✨", steps: [
+                        "以循環棒輕按<b>印堂穴</b>（兩眉中間），緩慢畫圓 10 次，平靜思緒",
+                        "從眉頭沿眉骨往眉尾推壓，再順勢往太陽穴輕滑，左右各 5 次",
+                        "由鼻翼兩側向顴骨方向斜向上提拉，幫助臉部線條上揚提振"
+                    ]},
+                    body: { title: "全身按摩", icon: "🙆", steps: [
+                        "雙手握棒，沿手臂內側（肝經路線）由手腕推至腋下，左右各 5 次",
+                        "坐姿下，以棒身輕壓大腿內側，由膝蓋緩推至鼠蹊，舒展筋絡",
+                        "雙手交疊輕壓<b>期門穴</b>（乳頭正下方第 6 肋骨），搭配深呼吸 3 次"
+                    ]}
+                },
+                火: {
+                    scalp: { title: "頭皮按摩", icon: "💆", steps: [
+                        "以循環棒棒尖輕點<b>百會穴</b>（頭頂），配合吐氣緩慢下壓，重複 5 次",
+                        "從頭頂往後頸<b>風池穴</b>（後頸髮際兩側凹陷）方向滑推，幫助散熱",
+                        "以棒身輕叩兩側頭皮（耳上方），每側各 10 次，舒緩頭部燥熱感"
+                    ]},
+                    face: { title: "臉部按摩", icon: "✨", steps: [
+                        "以棒尖點按<b>承漿穴</b>（下唇正中凹陷），畫圓 10 次，有助安定心神",
+                        "從下巴中央向兩側嘴角輕推，再沿法令紋向上至鼻翼，左右各 5 次",
+                        "雙頰以棒身輕滾，由下往上，搭配冷毛巾鎮定，舒緩紅潤燥熱"
+                    ]},
+                    body: { title: "全身按摩", icon: "🙆", steps: [
+                        "棒尖輕點<b>內關穴</b>（手腕內側往上三指），左右各按壓 30 秒",
+                        "以棒身沿前胸正中（任脈）從喉嚨下方緩推至心口，重複 5 次",
+                        "睡前以掌心搓熱後輕覆心口，配合深呼吸，幫助心火下降"
+                    ]}
+                },
+                土: {
+                    scalp: { title: "頭皮按摩", icon: "💆", steps: [
+                        "以棒尖輕按<b>四神聰穴</b>（百會前後左右各 1 寸），每點停留 5 秒",
+                        "從頭頂向兩側太陽穴方向緩慢畫弧，安定神志、促進循環",
+                        "以棒身輕敲後頸髮際線，由左至右來回 5 次，舒緩頸肩沉重感"
+                    ]},
+                    face: { title: "臉部按摩", icon: "✨", steps: [
+                        "棒尖點按<b>迎香穴</b>（鼻翼兩側），向上畫圓 10 次，促進臉部代謝",
+                        "沿顴骨下緣由鼻側向耳前輕推，有助淋巴引流消水腫，左右各 5 次",
+                        "以棒身在雙頰輕滾，從下巴往顴骨方向提拉，打造穩實輪廓感"
+                    ]},
+                    body: { title: "全身按摩", icon: "🙆", steps: [
+                        "棒尖點按<b>足三里穴</b>（膝蓋外側往下四指），每側按壓 1 分鐘",
+                        "順時針方向以棒身輕壓腹部繞圈，從右下腹 → 右上 → 左上 → 左下",
+                        "以棒身沿脊椎兩側（膀胱經）從腰部輕推至臀部，重複 5 次"
+                    ]}
+                },
+                水: {
+                    scalp: { title: "頭皮按摩", icon: "💆", steps: [
+                        "以棒尖輕點<b>玉枕穴</b>（後腦枕骨兩側隆起），停留 5 秒，重複 5 次",
+                        "從後腦勺向兩側耳後輕揉，沿耳後乳突骨向下至頸側，疏通淋巴",
+                        "以棒身溫和滾壓整個後頭部，配合緩慢呼吸，深層放鬆腦部緊繃"
+                    ]},
+                    face: { title: "臉部按摩", icon: "✨", steps: [
+                        "棒尖輕點<b>睛明穴</b>（內眼角）→ <b>攢竹穴</b>（眉頭）→ <b>魚腰穴</b>（眉中），各停 5 秒",
+                        "以棒身由眼內角向外輕推，帶動眼周淋巴循環，改善浮腫疲勞",
+                        "雙頰以棒身由內向外、由下向上輕滾，搭配精華液，提升深層水潤"
+                    ]},
+                    body: { title: "全身按摩", icon: "🙆", steps: [
+                        "棒尖點按<b>腎俞穴</b>（腰部第 2 腰椎旁開 1.5 寸），每側按壓 1 分鐘",
+                        "以棒身沿小腿內側（腎經路線）由踝骨向膝蓋方向緩慢推壓",
+                        "雙掌搓熱後貼覆腰腎區域，配合腹式呼吸 5 次，溫養腎氣"
+                    ]}
+                },
+                金: {
+                    scalp: { title: "頭皮按摩", icon: "💆", steps: [
+                        "棒尖輕點<b>太陽穴</b>（眉尾與眼尾延長線交會凹陷），畫圓各 10 次",
+                        "從前額髮際線由中央向兩側分推，如「梳頭」動作，重複 10 次",
+                        "以棒身輕敲頭頂至後腦，力道如雨點般輕柔，提振精氣神"
+                    ]},
+                    face: { title: "臉部按摩", icon: "✨", steps: [
+                        "棒尖點按<b>顴髎穴</b>（顴骨最高點正下方凹陷），停留 5 秒，重複 5 次",
+                        "以棒身沿下顎線從下巴向耳垂方向提拉，左右各 5 次，收緊輪廓",
+                        "從額頭中心向兩側輕推，再從鼻樑兩側向外展開，舒展整臉氣色"
+                    ]},
+                    body: { title: "全身按摩", icon: "🙆", steps: [
+                        "棒尖點按<b>合谷穴</b>（虎口拇指食指交叉凹陷），每側按壓 30 秒",
+                        "以棒身沿手臂外側（肺經）由肩膀向手腕方向緩推，左右各 5 次",
+                        "雙手交疊輕壓胸口，搭配深吸慢吐呼吸 5 次，擴張胸廓宣通肺氣"
+                    ]}
+                }
             };
 
             let result;
 
             // 木形人：臉型修長（高寬比最大），純幾何判斷
             if (geometry > 1.55) {
-                result = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: ["使用循環棒按壓額頭中心，幫助舒緩壓力感", "橫向滑動按摩額部，維護肌膚平滑質感", "增加環境濕度，輔助維持肌膚水潤健康"] };
+                result = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: CARE.木 };
             }
             // 火形人：膚色明顯紅潤，紅通道大幅主導（排除臉頰後門檻提高）
             else if (r > g + 50 && r > b + 45) {
-                result = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: ["點按嘴部兩側，展現自信親和魅力", "維持室內通風舒適，幫助肌膚穩定狀態", "強化日間防護，幫助維持肌膚亮透光采"] };
+                result = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: CARE.火 };
             }
             // 土形人：中等臉型 + 暖黃色調（r、g 均高於 b，放寬幾何門檻至 1.2）
             else if (geometry >= 1.2 && r > b + 10 && g > b + 5) {
-                result = { element: "土形人", icon: "⛰️", desc: "形相穩重，予人厚實包容感與穩定感。", product: PRODUCTS.BROWN, care: ["點按鼻翼兩側，維持舒適能量感", "加強毛孔深層清潔，幫助維持肌膚平滑質感", "護膚最後步驟按壓頰部，鎖住水分"] };
+                result = { element: "土形人", icon: "⛰️", desc: "形相穩重，予人厚實包容感與穩定感。", product: PRODUCTS.BROWN, care: CARE.土 };
             }
             // 水形人：寬圓臉型（純幾何，修正原 OR 邏輯誤判）
             else if (geometry < 1.22) {
-                result = { element: "水形人", icon: "💧", desc: "輪廓圓潤，氣色潤透，具備極佳的智慧與適應力。", product: PRODUCTS.BLACK, care: ["使用循環棒輕按眼周，舒緩疲勞感", "以筆身由內向外滑動，維護肌膚細緻緊度", "加強夜間修復養護，展現晶瑩透亮感"] };
+                result = { element: "水形人", icon: "💧", desc: "輪廓圓潤，氣色潤透，具備極佳的智慧與適應力。", product: PRODUCTS.BLACK, care: CARE.水 };
             }
             // 金形人：預設，輪廓均勻細緻、亮度佳
             else {
-                result = { element: "金形人", icon: "⚔️", desc: "您的輪廓俐落且具備細緻光澤感，展現俐落的決斷特質。", product: PRODUCTS.GOLD, care: ["以循環棒點按太陽穴，幫助提振精神活力", "沿下顎線向上按摩，維護肌膚彈力輪廓", "維持規律生活，展現自然健康光采"] };
+                result = { element: "金形人", icon: "⚔️", desc: "您的輪廓俐落且具備細緻光澤感，展現俐落的決斷特質。", product: PRODUCTS.GOLD, care: CARE.金 };
             }
 
             document.getElementById('final-icon').innerText = result.icon;
@@ -407,16 +496,30 @@
             document.getElementById('prod-name').innerText = result.product.name;
             document.getElementById('prod-feature').innerText = result.product.feature;
             document.getElementById('prod-desc').innerText = result.product.desc;
+            document.getElementById('prod-timing').innerText = result.product.timing;
             document.getElementById('prod-color-bar').style.backgroundColor = result.product.color;
             document.getElementById('prod-color-bar').style.boxShadow = `0 0 10px ${result.product.color}aa`;
 
             const list = document.getElementById('care-tips');
             list.innerHTML = "";
-            result.care.forEach(item => {
-                const div = document.createElement('div');
-                div.className = "flex items-start text-[11px] md:text-xs text-gray-400 bg-white/5 p-3 rounded-xl border border-white/5";
-                div.innerHTML = `<span class="text-yellow-600 mr-2 shrink-0">✦</span><span>${item}</span>`;
-                list.appendChild(div);
+            ['scalp', 'face', 'body'].forEach(key => {
+                const section = result.care[key];
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = "rounded-2xl border border-white/10 overflow-hidden";
+                let stepsHtml = section.steps.map((step, idx) =>
+                    `<div class="flex items-start text-[11px] md:text-xs text-gray-400 px-4 py-2.5 ${idx < section.steps.length - 1 ? 'border-b border-white/5' : ''}">
+                        <span class="text-yellow-600 font-bold mr-2.5 shrink-0 w-4">${idx + 1}.</span>
+                        <span>${step}</span>
+                    </div>`
+                ).join('');
+                sectionDiv.innerHTML = `
+                    <div class="flex items-center px-4 py-2.5 bg-white/5 border-b border-white/10">
+                        <span class="mr-2 text-sm">${section.icon}</span>
+                        <span class="text-[10px] md:text-[11px] font-bold text-yellow-500 tracking-widest uppercase">${section.title}</span>
+                    </div>
+                    ${stepsHtml}
+                `;
+                list.appendChild(sectionDiv);
             });
 
             document.getElementById('result-content').classList.remove('hidden');
