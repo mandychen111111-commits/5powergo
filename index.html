@@ -286,7 +286,12 @@
                 const rawRGB = sampleSkinRGB(landmarks);
                 const h = Math.abs(landmarks[152].y - landmarks[10].y);
                 const w = Math.abs(landmarks[454].x - landmarks[234].x);
-                const rawGeo = h / w;
+                // Correct for camera aspect ratio so geometry reflects true face AR
+                // regardless of portrait/landscape orientation
+                const camAR = videoElement.videoWidth > 0
+                    ? videoElement.videoHeight / videoElement.videoWidth
+                    : 1;
+                const rawGeo = (h / w) * camAR;
 
                 frameHistory.push({ geometry: rawGeo, rgb: rawRGB });
                 if (frameHistory.length > HISTORY_SIZE) frameHistory.shift();
@@ -473,23 +478,23 @@
 
             let result;
 
-            // 木形人：臉型修長（高寬比最大），純幾何判斷
-            if (geometry > 1.55) {
+            // 木形人：臉型修長（真實高寬比 > 1.5）
+            if (geometry > 1.5) {
                 result = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: CARE.木, image: "木形人.png" };
             }
-            // 火形人：膚色明顯紅潤，紅通道大幅主導（排除臉頰後門檻提高）
+            // 火形人：膚色明顯紅潤（任何臉型）
             else if (r > g + 50 && r > b + 45) {
                 result = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: CARE.火, image: "火形人.png" };
             }
-            // 土形人：中等臉型 + 暖黃色調（r、g 均高於 b，放寬幾何門檻至 1.2）
-            else if (geometry >= 1.2 && r > b + 10 && g > b + 5) {
+            // 土形人：中等偏寬臉 + 暖黃色調
+            else if (geometry < 1.35 && r > b + 8 && g > b + 3) {
                 result = { element: "土形人", icon: "⛰️", desc: "形相穩重，予人厚實包容感與穩定感。", product: PRODUCTS.BROWN, care: CARE.土, image: "土形人.png" };
             }
-            // 水形人：寬圓臉型（純幾何，修正原 OR 邏輯誤判）
-            else if (geometry < 1.22) {
+            // 水形人：圓潤寬臉（真實高寬比 < 1.15）
+            else if (geometry < 1.15) {
                 result = { element: "水形人", icon: "💧", desc: "輪廓圓潤，氣色潤透，具備極佳的智慧與適應力。", product: PRODUCTS.BLACK, care: CARE.水, image: "水形人.png" };
             }
-            // 金形人：預設，輪廓均勻細緻、亮度佳
+            // 金形人：輪廓均衡（高寬比 1.15～1.5，膚色中性）
             else {
                 result = { element: "金形人", icon: "⚔️", desc: "您的輪廓俐落且具備細緻光澤感，展現俐落的決斷特質。", product: PRODUCTS.GOLD, care: CARE.金, image: "金形人.png" };
             }
