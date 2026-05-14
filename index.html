@@ -183,7 +183,11 @@
                     </div>
 
                     <!-- 導購連結按鈕 -->
-                    <div class="pt-4">
+                    <div class="pt-4 space-y-3">
+                        <a id="download-btn" href="#" download class="flex items-center justify-center gap-2 w-full py-3 bg-white/5 hover:bg-white/10 border border-white/20 hover:border-yellow-500/50 text-gray-300 hover:text-yellow-400 text-center font-bold rounded-2xl transition-all active:scale-95 text-xs md:text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            下載專屬按摩圖解
+                        </a>
                         <a href="https://www.show-hair.com/bpw08.php" target="_blank" class="block w-full py-4 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-black text-center font-bold rounded-2xl shadow-[0_10px_25px_rgba(255,215,0,0.3)] transition-all active:scale-95 text-sm md:text-base">
                             立即了解循環力
                         </a>
@@ -471,28 +475,32 @@
 
             // 木形人：臉型修長（高寬比最大），純幾何判斷
             if (geometry > 1.55) {
-                result = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: CARE.木 };
+                result = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: CARE.木, image: "木形人.png" };
             }
             // 火形人：膚色明顯紅潤，紅通道大幅主導（排除臉頰後門檻提高）
             else if (r > g + 50 && r > b + 45) {
-                result = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: CARE.火 };
+                result = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: CARE.火, image: "火形人.png" };
             }
             // 土形人：中等臉型 + 暖黃色調（r、g 均高於 b，放寬幾何門檻至 1.2）
             else if (geometry >= 1.2 && r > b + 10 && g > b + 5) {
-                result = { element: "土形人", icon: "⛰️", desc: "形相穩重，予人厚實包容感與穩定感。", product: PRODUCTS.BROWN, care: CARE.土 };
+                result = { element: "土形人", icon: "⛰️", desc: "形相穩重，予人厚實包容感與穩定感。", product: PRODUCTS.BROWN, care: CARE.土, image: "土形人.png" };
             }
             // 水形人：寬圓臉型（純幾何，修正原 OR 邏輯誤判）
             else if (geometry < 1.22) {
-                result = { element: "水形人", icon: "💧", desc: "輪廓圓潤，氣色潤透，具備極佳的智慧與適應力。", product: PRODUCTS.BLACK, care: CARE.水 };
+                result = { element: "水形人", icon: "💧", desc: "輪廓圓潤，氣色潤透，具備極佳的智慧與適應力。", product: PRODUCTS.BLACK, care: CARE.水, image: "水形人.png" };
             }
             // 金形人：預設，輪廓均勻細緻、亮度佳
             else {
-                result = { element: "金形人", icon: "⚔️", desc: "您的輪廓俐落且具備細緻光澤感，展現俐落的決斷特質。", product: PRODUCTS.GOLD, care: CARE.金 };
+                result = { element: "金形人", icon: "⚔️", desc: "您的輪廓俐落且具備細緻光澤感，展現俐落的決斷特質。", product: PRODUCTS.GOLD, care: CARE.金, image: "金形人.png" };
             }
 
             document.getElementById('final-icon').innerText = result.icon;
             document.getElementById('final-name').innerText = result.element;
             document.getElementById('final-desc').innerText = result.desc;
+
+            const dlBtn = document.getElementById('download-btn');
+            dlBtn.href = result.image;
+            dlBtn.download = result.element + '按摩圖解.png';
             document.getElementById('prod-name').innerText = result.product.name;
             document.getElementById('prod-feature').innerText = result.product.feature;
             document.getElementById('prod-desc').innerText = result.product.desc;
