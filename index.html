@@ -232,8 +232,9 @@
         const mainScanner = document.getElementById('main-scanner');
         
         let isAnalyzing = false;
-        let lastData = { geometry: 0, rgb: [0,0,0], bright: 0 };
-        const SCAN_POINTS = [10, 1, 152, 234, 454];
+        let lastData = { geometry: 0, rgb: [0,0,0], bright: 0, jawRatio: 0, mouthRatio: 0, foreRatio: 1 };
+        // 掃描點：額頭、鼻尖、下巴、顴骨左右、嘴角左右、下顎左右、前額左右
+        const SCAN_POINTS = [10, 1, 152, 234, 454, 61, 291, 172, 397, 103, 332];
         // 採樣點：額頭、鼻樑、鼻尖、下巴、人中（排除臉頰避免偏紅）
         const SKIN_SAMPLE_POINTS = [10, 168, 1, 152, 4];
         const frameHistory = [];
@@ -285,26 +286,36 @@
 
                 const rawRGB = sampleSkinRGB(landmarks);
                 const h = Math.abs(landmarks[152].y - landmarks[10].y);
-                const w = Math.abs(landmarks[454].x - landmarks[234].x);
-                // Correct for camera aspect ratio so geometry reflects true face AR
-                // regardless of portrait/landscape orientation
+                const cheekW  = Math.abs(landmarks[454].x - landmarks[234].x); // 顴骨寬
+                const jawW    = Math.abs(landmarks[397].x - landmarks[172].x); // 下顎寬
+                const mouthW  = Math.abs(landmarks[291].x - landmarks[61].x);  // 嘴角寬
+                const foreW   = Math.abs(landmarks[332].x - landmarks[103].x); // 前額寬
                 const camAR = videoElement.videoWidth > 0
                     ? videoElement.videoHeight / videoElement.videoWidth
                     : 1;
-                const rawGeo = (h / w) * camAR;
+                const rawGeo       = (h / cheekW) * camAR;
+                const rawJawRatio  = cheekW > 0 ? jawW / cheekW : 0.8;   // 下顎/顴骨
+                const rawMouthRatio= cheekW > 0 ? mouthW / cheekW : 0.5; // 嘴寬/顴骨
+                const rawForeRatio = jawW > 0 ? foreW / jawW : 1;         // 前額/下顎（越大越三角）
 
-                frameHistory.push({ geometry: rawGeo, rgb: rawRGB });
+                frameHistory.push({ geometry: rawGeo, rgb: rawRGB, jawRatio: rawJawRatio, mouthRatio: rawMouthRatio, foreRatio: rawForeRatio });
                 if (frameHistory.length > HISTORY_SIZE) frameHistory.shift();
 
                 const n = frameHistory.length;
-                const avgGeo = frameHistory.reduce((s, f) => s + f.geometry, 0) / n;
-                const avgR = Math.round(frameHistory.reduce((s, f) => s + f.rgb[0], 0) / n);
-                const avgG = Math.round(frameHistory.reduce((s, f) => s + f.rgb[1], 0) / n);
-                const avgB = Math.round(frameHistory.reduce((s, f) => s + f.rgb[2], 0) / n);
+                const avgGeo   = frameHistory.reduce((s, f) => s + f.geometry, 0) / n;
+                const avgR     = Math.round(frameHistory.reduce((s, f) => s + f.rgb[0], 0) / n);
+                const avgG     = Math.round(frameHistory.reduce((s, f) => s + f.rgb[1], 0) / n);
+                const avgB     = Math.round(frameHistory.reduce((s, f) => s + f.rgb[2], 0) / n);
+                const avgJaw   = frameHistory.reduce((s, f) => s + f.jawRatio, 0) / n;
+                const avgMouth = frameHistory.reduce((s, f) => s + f.mouthRatio, 0) / n;
+                const avgFore  = frameHistory.reduce((s, f) => s + f.foreRatio, 0) / n;
 
-                lastData.geometry = avgGeo;
-                lastData.rgb = [avgR, avgG, avgB];
-                lastData.bright = (avgR + avgG + avgB) / 3;
+                lastData.geometry   = avgGeo;
+                lastData.rgb        = [avgR, avgG, avgB];
+                lastData.bright     = (avgR + avgG + avgB) / 3;
+                lastData.jawRatio   = avgJaw;
+                lastData.mouthRatio = avgMouth;
+                lastData.foreRatio  = avgFore;
 
                 colorBox.style.backgroundColor = `rgb(${avgR}, ${avgG}, ${avgB})`;
                 document.getElementById('color-hex').innerText = `HEX: #${avgR.toString(16).padStart(2,'0')}${avgG.toString(16).padStart(2,'0')}${avgB.toString(16).padStart(2,'0')}`;
@@ -377,7 +388,7 @@
         }
 
         function renderProductReport() {
-            const { geometry, rgb, bright } = lastData;
+            const { geometry, rgb, bright, jawRatio, mouthRatio, foreRatio } = lastData;
             const [r, g, b] = rgb;
 
             const PRODUCTS = {
@@ -478,23 +489,23 @@
 
             let result;
 
-            // 木形人：臉型修長（真實高寬比 > 1.5）
-            if (geometry > 1.5) {
+            // 木形人：修長臉（高寬比大，下顎不過窄）
+            if (geometry > 1.5 && jawRatio > 0.65) {
                 result = { element: "木形人", icon: "🌲", desc: "形相清秀，展現強韌生命力與剛直氣息。", product: PRODUCTS.GRAY, care: CARE.木, image: "木形人.png" };
             }
-            // 火形人：膚色明顯紅潤（任何臉型）
-            else if (r > g + 50 && r > b + 45) {
+            // 火形人：明顯紅潤膚色，或前額明顯寬於下顎（三角臉）
+            else if ((r > g + 50 && r > b + 45) || foreRatio > 1.28) {
                 result = { element: "火形人", icon: "🔥", desc: "輪廓鮮明，神采奕奕，展現熱情感染力。", product: PRODUCTS.RED, care: CARE.火, image: "火形人.png" };
             }
-            // 土形人：中等偏寬臉 + 暖黃色調
-            else if (geometry < 1.35 && r > b + 8 && g > b + 3) {
+            // 土形人：下顎寬（方正臉）且臉不修長
+            else if (jawRatio > 0.78 && geometry < 1.4) {
                 result = { element: "土形人", icon: "⛰️", desc: "形相穩重，予人厚實包容感與穩定感。", product: PRODUCTS.BROWN, care: CARE.土, image: "土形人.png" };
             }
-            // 水形人：圓潤寬臉（真實高寬比 < 1.15）
+            // 水形人：圓潤寬臉（高寬比低）
             else if (geometry < 1.15) {
                 result = { element: "水形人", icon: "💧", desc: "輪廓圓潤，氣色潤透，具備極佳的智慧與適應力。", product: PRODUCTS.BLACK, care: CARE.水, image: "水形人.png" };
             }
-            // 金形人：輪廓均衡（高寬比 1.15～1.5，膚色中性）
+            // 金形人：均衡俐落輪廓（預設）
             else {
                 result = { element: "金形人", icon: "⚔️", desc: "您的輪廓俐落且具備細緻光澤感，展現俐落的決斷特質。", product: PRODUCTS.GOLD, care: CARE.金, image: "金形人.png" };
             }
